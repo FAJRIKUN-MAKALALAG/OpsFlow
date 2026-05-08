@@ -12,7 +12,7 @@ export default function AdminDashboard() {
         const uSnap = await getDocs(query(collection(db, 'users'))).catch(e => handleFirestoreError(e, OperationType.LIST, 'users'));
         const dSnap = await getDocs(query(collection(db, 'divisions'))).catch(e => handleFirestoreError(e, OperationType.LIST, 'divisions'));
         const rSnap = await getDocs(query(collection(db, 'reports'))).catch(e => handleFirestoreError(e, OperationType.LIST, 'reports'));
-        
+
         setMetrics({
           users: uSnap ? uSnap.size : 0,
           divisions: dSnap ? dSnap.size : 0,
@@ -28,7 +28,7 @@ export default function AdminDashboard() {
   return (
     <>
       <header className="h-16 bg-white border-b border-slate-200 flex items-center px-8 shrink-0">
-        <h1 className="text-lg font-semibold text-slate-800">Admin Dashboard ---</h1>
+        <h1 className="text-lg font-semibold text-slate-800">Admin Dashboard</h1>
       </header>
 
       <div className="p-8 flex-1 overflow-auto">
