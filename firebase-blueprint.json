@@ -1,0 +1,66 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile containing role and division assignment.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "nik": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "manager", "staff"] },
+        "divisionId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "email", "role"]
+    },
+    "Division": {
+      "title": "Division",
+      "description": "Organizational division.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "managerId": { "type": "string", "description": "ID of the user who is the manager." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "Daily operational report submitted by staff.",
+      "type": "object",
+      "properties": {
+        "staffId": { "type": "string" },
+        "divisionId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "title": { "type": "string" },
+        "category": { "type": "string", "enum": ["Rutin", "Proyek Khusus", "Administratif"] },
+        "description": { "type": "string" },
+        "durationMinutes": { "type": "integer" },
+        "attachmentUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending Review", "Approved", "Revision Required"] },
+        "managerComments": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["staffId", "divisionId", "date", "title", "category", "description", "durationMinutes", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Stores user profiles including their role and division."
+    },
+    "/divisions/{divisionId}": {
+      "schema": { "$ref": "#/entities/Division" },
+      "description": "Stores organizational divisions."
+    },
+    "/reports/{reportId}": {
+      "schema": { "$ref": "#/entities/Report" },
+      "description": "Stores operational reports submitted by staff."
+    }
+  }
+}

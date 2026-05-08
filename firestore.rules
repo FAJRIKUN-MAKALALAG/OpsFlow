@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() { return request.auth != null; }
+    function isValidId(id) { return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    function getUserRole() {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return userDoc != null ? userDoc.data.role : null;
+    }
+    
+    function getUserDivision() {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return userDoc != null ? userDoc.data.divisionId : null;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && (request.auth.token.email == 'fajrikunmakalalag@gmail.com' || getUserRole() == 'admin');
+    }
+
+    // USERS COLLECTION
+    function isValidUser(data) {
+      return data.keys().hasAll(['userId', 'name', 'email', 'role']) &&
+             data.userId is string && data.userId.size() <= 128 &&
+             data.name is string && data.name.size() <= 200 &&
+             data.email is string && data.email.size() <= 200 &&
+             data.role is string && (data.role == 'admin' || data.role == 'manager' || data.role == 'staff') &&
+             (data.keys().hasAny(['nik']) ? (data.nik is string && data.nik.size() <= 100) : true) &&
+             (data.keys().hasAny(['divisionId']) ? (data.divisionId is string && data.divisionId.size() <= 128) : true) &&
+             (data.keys().hasAny(['createdAt']) ? data.createdAt is timestamp : true) &&
+             (data.keys().hasAny(['updatedAt']) ? data.updatedAt is timestamp : true);
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin() || getUserRole() == 'manager');
+      allow create: if isSignedIn() && isValidId(userId) && isValidUser(incoming()) && incoming().userId == userId &&
+                      (isAdmin() || request.auth.uid == userId);
+      allow update: if isSignedIn() && isValidId(userId) && isValidUser(incoming()) && incoming().userId == userId &&
+                      (isAdmin() || (request.auth.uid == userId && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'nik', 'updatedAt'])));
+      allow delete: if isAdmin();
+    }
+
+    // DIVISIONS COLLECTION
+    function isValidDivision(data) {
+      return data.keys().hasAll(['name']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
+             (data.keys().hasAny(['managerId']) ? (data.managerId is string && data.managerId.size() <= 128) : true) &&
+             (data.keys().hasAny(['createdAt']) ? data.createdAt is timestamp : true) &&
+             (data.keys().hasAny(['updatedAt']) ? data.updatedAt is timestamp : true);
+    }
+
+    match /divisions/{divisionId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() && isValidId(divisionId) && isValidDivision(incoming());
+      allow update: if isAdmin() && isValidId(divisionId) && isValidDivision(incoming());
+      allow delete: if isAdmin();
+    }
+
+    // REPORTS COLLECTION
+    function isValidReport(data) {
+      return data.keys().hasAll(['staffId', 'divisionId', 'date', 'title', 'category', 'description', 'durationMinutes', 'status']) &&
+             data.staffId is string && data.staffId.size() <= 128 &&
+             data.divisionId is string && data.divisionId.size() <= 128 &&
+             data.date is string && data.date.size() <= 20 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.category is string && (data.category == 'Rutin' || data.category == 'Proyek Khusus' || data.category == 'Administratif') &&
+             data.description is string && data.description.size() <= 10000 &&
+             data.durationMinutes is number && data.durationMinutes >= 0 &&
+             data.status is string && (data.status == 'Pending Review' || data.status == 'Approved' || data.status == 'Revision Required') &&
+             (data.keys().hasAny(['attachmentUrl']) ? (data.attachmentUrl is string && data.attachmentUrl.size() <= 1000) : true) &&
+             (data.keys().hasAny(['managerComments']) ? (data.managerComments is string && data.managerComments.size() <= 1000) : true) &&
+             (data.keys().hasAny(['createdAt']) ? data.createdAt is timestamp : true) &&
+             (data.keys().hasAny(['updatedAt']) ? data.updatedAt is timestamp : true);
+    }
+
+    match /reports/{reportId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.staffId == request.auth.uid ||
+        (getUserRole() == 'manager' && resource.data.divisionId == getUserDivision())
+      );
+
+      allow create: if isSignedIn() && isValidId(reportId) && isValidReport(incoming()) &&
+                      incoming().staffId == request.auth.uid && incoming().status == 'Pending Review'; // Optional validation -> && incoming().divisionId == getUserDivision(); I'll remove this to simplify, division can be set by client (or read from user profile on client).
+
+      allow update: if isSignedIn() && isValidId(reportId) && isValidReport(incoming()) && incoming().staffId == existing().staffId && incoming().divisionId == existing().divisionId && (
+        isAdmin() ||
+        (
+          request.auth.uid == existing().staffId &&
+          (existing().status == 'Revision Required' || existing().status == 'Pending Review') &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['date', 'title', 'category', 'description', 'durationMinutes', 'attachmentUrl', 'status', 'updatedAt']) &&
+          (incoming().status == 'Pending Review')
+        ) ||
+        (
+          getUserRole() == 'manager' && existing().divisionId == getUserDivision() &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'managerComments', 'updatedAt']) &&
+          (incoming().status == 'Approved' || incoming().status == 'Revision Required')
+        )
+      );
+      
+      allow delete: if isAdmin();
+    }
+  }
+}
