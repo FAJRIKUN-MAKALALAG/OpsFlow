@@ -1,29 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { collection, query, getDocs } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '@/lib/firebase';
+import React from 'react';
 import { Card } from '@/components/ui/core';
 
 export default function AdminDashboard() {
-  const [metrics, setMetrics] = useState({ users: 0, divisions: 0, reports: 0 });
-
-  useEffect(() => {
-    async function fetchStats() {
-      try {
-        const uSnap = await getDocs(query(collection(db, 'users'))).catch(e => handleFirestoreError(e, OperationType.LIST, 'users'));
-        const dSnap = await getDocs(query(collection(db, 'divisions'))).catch(e => handleFirestoreError(e, OperationType.LIST, 'divisions'));
-        const rSnap = await getDocs(query(collection(db, 'reports'))).catch(e => handleFirestoreError(e, OperationType.LIST, 'reports'));
-
-        setMetrics({
-          users: uSnap ? uSnap.size : 0,
-          divisions: dSnap ? dSnap.size : 0,
-          reports: rSnap ? rSnap.size : 0
-        });
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    fetchStats();
-  }, []);
+  // Static placeholder metrics (database features removed)
+  const metrics = { users: 0, divisions: 0, reports: 0 };
 
   return (
     <>

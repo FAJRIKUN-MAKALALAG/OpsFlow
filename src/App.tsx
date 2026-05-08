@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './lib/AuthContext';
+import { AuthProvider } from './lib/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import DashboardRouter from './pages/DashboardRouter';
@@ -12,21 +12,8 @@ import UserManagement from './pages/admin/UserManagement';
 import DivisionManagement from './pages/admin/DivisionManagement';
 import ReviewReport from './pages/manager/ReviewReport';
 
-function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) {
-  const { user, profile, loading } = useAuth();
-
-  if (loading) {
-    return <div className="flex h-screen w-screen items-center justify-center bg-[#F8F9FA]">Loading...</div>;
-  }
-
-  if (!user || !profile) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (allowedRoles && !allowedRoles.includes(profile.role)) {
-    return <Navigate to="/" replace />;
-  }
-
+function ProtectedRoute({ children }: { children: React.ReactNode, allowedRoles?: string[] }) {
+  // No authentication or role checks – always render children
   return <>{children}</>;
 }
 
